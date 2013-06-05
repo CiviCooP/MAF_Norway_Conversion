@@ -15,12 +15,12 @@ class Conversion_Config {
 	public $db_name = "maf";
 	
 	// path to the database dump files
-	public $path = "C:\\Users\\jaap\\Documents\\Barnworks\\Workspaces\\civicoop\\maf\\sites\\all\\modules\\dump\\";
+	public $path = "/var/www/maf/sites/all/modules/dump/";
 	
 	// path to civi crm
-	public $civi_path = "C:\\Users\\jaap\\Documents\\Barnworks\\Workspaces\\civicoop\\maf\\sites\\all\\modules\\civicrm\\";	
+	public $civi_path = "/var/www/maf/sites/all/modules/civicrm/";	
 	
 	// path to drupal
-	public $drupal_path = "C:\\Users\\jaap\\Documents\\Barnworks\\Workspaces\\civicoop\\maf\\sites\\default\\";
+	public $drupal_path = "/var/www/maf/sites/default/";
 
 }
