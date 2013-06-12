@@ -1,7 +1,7 @@
 <?php
 
 require_once('config.php');
-require_once('importfile.php');
+require_once('library/importfile.php');
 
 class Conversion {
 
@@ -11,17 +11,24 @@ class Conversion {
 	
 	public function __construct(Conversion_Config $config) {
 	
-		set_time_limit(4*60); 
+		set_time_limit(8*60); 
 	
 		$this->config = $config;
-		$this->pdo = new PDO('mysql:host='.$this->config->db_hostname.';dbname='.$this->config->db_name, $this->config->db_username, $this->config->db_password);
+		$this->pdo = new PDO('mysql:host='.$this->config->db_hostname.';dbname='.$this->config->db_name.";charset=utf-8", $this->config->db_username, $this->config->db_password,array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
 		$this->pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
 		$this->pdo->setAttribute(PDO::ATTR_AUTOCOMMIT, true);
 		$this->pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false); 
 	}
 	
 	public function import() {
+		$this->importfile('PMF_MAF.FYLKE.txt'); //counties
+		$this->importfile('PMF_MAF.KOMMUNE.txt'); //kommune
+		$this->importfile('PMF_MAF.POSTSTED.txt'); //postcodes
 		$this->importfile('PMF_MAF.NAVN.txt');
+		$this->importfile('PMF_MAF.ADRESSE.txt');
+		//tags and groups
+		$this->importfile('PMF_MAF.INFOTYPE.txt');
+		$this->importfile('PMF_MAF.INFOPROFIL.txt');
 	}
 	
 	protected function importFile($name) {

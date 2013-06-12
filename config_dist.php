@@ -12,7 +12,7 @@ class Conversion_Config {
 	public $db_password = "admin1234";
 	
 	// Database name
-	public $db_name = "maf";
+	public $db_name = "import";
 	
 	// path to the database dump files
 	public $path = "/var/www/maf/sites/all/modules/dump/";
@@ -22,5 +22,19 @@ class Conversion_Config {
 	
 	// path to drupal
 	public $drupal_path = "/var/www/maf/sites/default/";
+	
+	** The settings of the Civi database **/
+	
+	// The hostname of the database	 
+	public $civi_db_hostname = "localhost";
+	
+	// Database username
+	public $civi_db_username = "admin";
+	
+	// Database password
+	public $civi_db_password = "admin1234";
+	
+	// Database name
+	public $civi_db_name = "maf";
 
 }
