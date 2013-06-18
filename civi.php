@@ -15,6 +15,7 @@ class Civi {
 	
 	public function __construct(Conversion_Config $config) {
 		set_time_limit(40*60); 
+		ini_set('memory_limit', '256M');
 		
 		$this->config = $config;
 		
@@ -63,7 +64,27 @@ class Civi {
 	}
 
 	public function import() {
-		$i = new importContacts($this->pdo, $this->civi_pdo, $this->api, $this->config);
+		$offset = 0;
+		if (isset($_GET['offset'])) {
+			$offset = $_GET['offset'];
+		}
+		$limit = 100;
+		$i = new importContacts($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
+		if ($i->getCount() == $limit) {
+			echo "/sites/all/modules/conversion/civi.php?offset=".($offset+$limit);
+			
+			echo "<script>
+				setTimeout('herladen()', 1000);
+   
+				function herladen() {
+					window.location = '/sites/all/modules/conversion/civi.php?offset=".($offset+$limit)."';
+				}
+			</script>";
+		}
+	}
+	
+	public function importPledges() {
+		$i = new importPledges($this->pdo, $this->civi_pdo, $this->api, $this->config);
 	}
 }
 

@@ -19,7 +19,9 @@ class importContacts {
 	
 	protected $base_id = 0;
 	
-	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config) {
+	protected $count = 0;
+	
+	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config, $offset=0, $limit=100) {
 		$this->config = $config;
 		$this->pdo = $pdo;
 		$this->civi_pdo = $civi_pdo;
@@ -28,43 +30,52 @@ class importContacts {
 		$this->fields = new tempCustomFields($pdo, $api, $config);
 		$this->importTagsGroups = new importTagsGroups($pdo, $civi_pdo, $api, $config);
 		
-		$this->civi_pdo->query("ALTER TABLE  `civicrm_contact` AUTO_INCREMENT =45000");
-		$this->import();
+		if ($offset == 0) {
+			$this->civi_pdo->query("ALTER TABLE  `civicrm_contact` AUTO_INCREMENT =45000");
+		}
+		$this->count = $this->import($offset, $limit);
 	}
 	
-	protected function loadAllRecords() {
-		$sql = "SELECT * FROM `pmf_maf_navn_txt` `n` INNER JOIN `pmf_maf_adresse_txt` `a` ON `n`.`L_NAVN_ID` = `a`.`L_NAVN_ID`";
+	public function getCount() {
+		return $this->count;
+	}
+	
+	protected function loadAllRecords($offset, $limit) {
+		$sql = "SELECT * FROM `PMF_MAF_NAVN_txt` `n` INNER JOIN `PMF_MAF_ADRESSE_txt` `a` ON `n`.`L_NAVN_ID` = `a`.`L_NAVN_ID` ORDER BY `a`.`L_NAVN_ID` LIMIT ".$offset.", ".$limit;
 		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
 		$stmnt->execute();
 		return $stmnt;
 	}
 	
 	protected function findByPostcode($row) {
-		$sql = "SELECT * FROM `pmf_maf_poststed_txt` WHERE `A_LAND_ID` = '".$row['A_LAND_ID']."' AND `A_POSTNUMMER` = '".$row['A_POSTNUMMER']."'";
+		$sql = "SELECT * FROM `PMF_MAF_POSTSTED_txt` WHERE `A_LAND_ID` = '".$row['A_LAND_ID']."' AND `A_POSTNUMMER` = '".$row['A_POSTNUMMER']."'";
 		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
 		$stmnt->execute();
 		return $stmnt->fetch();
 	}
 	
 	protected function findKommune($kommune_id) {
-		$sql = "SELECT * FROM `pmf_maf_kommune_txt` WHERE `A_KOMMUNE_ID` = '".$kommune_id."'";
+		$sql = "SELECT * FROM `PMF_MAF_KOMMUNE_txt` WHERE `A_KOMMUNE_ID` = '".$kommune_id."'";
 		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
 		$stmnt->execute();
 		return $stmnt->fetch();
 	}
 	
 	protected function findFylke($fylke_id, $land_id) {
-		$sql = "SELECT * FROM `pmf_maf_fylke_txt` WHERE `I_FYLKE_ID` = '".$fylke_id."' AND `A_LAND_ID` = '".$land_id."'";
+		$sql = "SELECT * FROM `PMF_MAF_FYLKE_txt` WHERE `I_FYLKE_ID` = '".$fylke_id."' AND `A_LAND_ID` = '".$land_id."'";
 		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
 		$stmnt->execute();
 		return $stmnt->fetch();
 	}
 	
-	protected function import() {
-		$stmnt = $this->loadAllRecords();
+	protected function import($offset, $limit) {
+		$stmnt = $this->loadAllRecords($offset, $limit);
+		$i =0;
 		while ($row = $stmnt->fetch()) {
 			$this->importContact($row);
+			$i++;
 		}
+		return $i;
 	}
 	
 	protected function importContact($row) {
@@ -74,6 +85,11 @@ class importContacts {
 		}
 		//ignore duplicate contacts
 		if (isset($row['L_DUPLIKATVINNER_ID']) && $row['L_DUPLIKATVINNER_ID']) {
+			return false;
+		}
+		
+		// skip the first contacts
+		if ($row['L_NAVN_ID'] < 14) {
 			return false;
 		}
 	
@@ -141,12 +157,12 @@ class importContacts {
 			$params = array();
 			$params['nick_name'] = $row['A_KALLENAVN'];
 			$params['last_name'] = $row['A_ETTERNAVN'];
-			$params['frist_name'] = $row['A_FORNAVN'];
+			$params['first_name'] = $row['A_FORNAVN'];
 			if (($pos = strpos($params['nick_name'], ' og '))!==false) {
 				$params['nick_name'] = substr($params['nick_name'], $pos + 4);
 			}
-			if (($pos = strpos($params['frist_name'], ' og '))!==false) {
-				$params['frist_name'] = substr($params['frist_name'], $pos + 4);
+			if (($pos = strpos($params['first_name'], ' og '))!==false) {
+				$params['first_name'] = substr($params['first_name'], $pos + 4);
 			}
 			$params['contact_type'] = 'Individual';
 			if ($this->api->Contact->Create($params)) {
@@ -217,10 +233,10 @@ class importContacts {
 		$params['custom_'.$this->fields->getCustomField('l_navn_id')] = $row['L_NAVN_ID'];
 		$params['contact_id'] = $this->base_id + (int) $row['L_NAVN_ID'];
 		
-		if ($params['contact_id'] < 3) {
+		/*if ($params['contact_id'] < 3) {
 			//there are two contacts with id 1 and 2. But civi has initially also two contacts with id 1 and 2
 			$params['contact_id'] = $params['contact_id'] + 2;
-		}
+		}*/
 		
 		$this->determineContactType($row, $params);
 		$this->determineName($row, $params);

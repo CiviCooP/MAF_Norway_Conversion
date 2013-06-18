@@ -31,10 +31,18 @@ class Conversion {
 		$this->importfile('PMF_MAF.INFOPROFIL.txt');
 	}
 	
+	public function importPledges() {
+		$this->importfile('PMF_MAF.AVTALE.txt'); //pledges
+	}
+	
 	protected function importFile($name) {
 		$import = new importfile($this->pdo, $this->config, $name);
 	}
 }
 
 $conversion = new Conversion(new Conversion_Config());
-$conversion->import();
+if ($_GET['pledges'] == 1) {
+	$conversion->importPledges();
+} else {
+	$conversion->import();
+}

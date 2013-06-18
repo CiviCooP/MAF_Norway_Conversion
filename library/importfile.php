@@ -7,6 +7,7 @@ require_once('importFYLKE.php');
 require_once('importKOMMUNE.php');
 require_once('importINFOTYPE.php');
 require_once('importINFOPROFIL.php');
+require_once('importAVTALE.php');
 
 class importfile {
 
@@ -45,6 +46,9 @@ class importfile {
 				break;
 			case 'PMF_MAF.INFOPROFIL.txt':
 				return new importINFOPROFIL($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.AVTALE.txt':
+				return new importAVTALE($this->pdo, $this->config);
 				break;
 		}
 		return null;

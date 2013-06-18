@@ -57,6 +57,8 @@ class tempCustomFields {
 			$params['name'] = 'l_navn_id';
 			$params['label'] = 'l_navn_id';
 			$params['is_active'] = '1';
+			$params['html_type'] = 'Text';
+			$params['data_type'] = 'String';
 			
 			$result = new stdClass();
 			if ($this->api->CustomField->Create($params)) {
