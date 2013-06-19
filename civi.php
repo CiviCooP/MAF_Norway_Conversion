@@ -2,6 +2,7 @@
 
 require_once('config.php');
 require_once('civi/importContacts.php');
+require_once('civi/importPledges.php');
 
 class Civi {
 
@@ -38,6 +39,7 @@ class Civi {
 	
 	protected function check_requirements() {
 		$this->check_extension('org.civicoop.general.api.country');
+		$this->check_extension('org.civicoop.general.api.financialtype');
 		$this->check_extension('org.civicoop.no.maf.custom');
 	}
 	
@@ -68,7 +70,7 @@ class Civi {
 		if (isset($_GET['offset'])) {
 			$offset = $_GET['offset'];
 		}
-		$limit = 100;
+		$limit = 300;
 		$i = new importContacts($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
 		if ($i->getCount() == $limit) {
 			echo "/sites/all/modules/conversion/civi.php?offset=".($offset+$limit);
@@ -83,10 +85,30 @@ class Civi {
 		}
 	}
 	
-	public function importPledges() {
-		$i = new importPledges($this->pdo, $this->civi_pdo, $this->api, $this->config);
+	public function importPledges() {		
+		$offset = 0;
+		if (isset($_GET['offset'])) {
+			$offset = $_GET['offset'];
+		}
+		$limit = 300;
+		$i = new importPledges($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
+		if ($i->getCount() == $limit) {
+			echo "/sites/all/modules/conversion/civi.php?pledges=1&offset=".($offset+$limit);
+			
+			echo "<script>
+				setTimeout('herladen()', 1000);
+   
+				function herladen() {
+					window.location = '/sites/all/modules/conversion/civi.php?pledges=1&offset=".($offset+$limit)."';
+				}
+			</script>";
+		}
 	}
 }
 
 $civi = new Civi(new Conversion_Config());
-$civi->import();
+if (isset($_GET['pledges']) && $_GET['pledges'] == 1) {
+	$civi->importPledges();
+} else {
+	$civi->import();
+}

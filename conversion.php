@@ -33,6 +33,7 @@ class Conversion {
 	
 	public function importPledges() {
 		$this->importfile('PMF_MAF.AVTALE.txt'); //pledges
+		$this->importfile('PMF_MAF.PRODUKTTYPE.txt'); //financial types
 	}
 	
 	protected function importFile($name) {

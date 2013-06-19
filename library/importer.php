@@ -90,8 +90,12 @@ abstract class importer {
 			
 			if ($this->columns[$i]->type == "DATETIME") {
 				$value = str_replace(".", "-", $value);
-				$dt = new DateTime($value);
-				$value = $dt->format("Y-m-d H:i:s");
+				if (strlen($value)) {
+					$dt = new DateTime($value);
+					$value = $dt->format("Y-m-d H:i:s");
+				} else {
+					$value = null;
+				}
 			} elseif ($this->columns[$i]->type == "VARCHAR") {
 				$value = utf8_encode($value);
 			} elseif ($this->columns[$i]->type == "TEXT") {

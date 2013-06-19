@@ -8,6 +8,7 @@ require_once('importKOMMUNE.php');
 require_once('importINFOTYPE.php');
 require_once('importINFOPROFIL.php');
 require_once('importAVTALE.php');
+require_once('importPRODUKTTYPE.php');
 
 class importfile {
 
@@ -49,6 +50,9 @@ class importfile {
 				break;
 			case 'PMF_MAF.AVTALE.txt':
 				return new importAVTALE($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.PRODUKTTYPE.txt':
+				return new importPRODUKTTYPE($this->pdo, $this->config);
 				break;
 		}
 		return null;
