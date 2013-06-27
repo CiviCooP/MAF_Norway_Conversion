@@ -66,7 +66,7 @@ class importTagsGroups {
 		}
 	}
 	
-	protected function add($entity, $id_field, $id, $contact_id, $in_date = false) {
+	public function add($entity, $id_field, $id, $contact_id, $in_date = false) {
 		$params = array(
 			'contact_id' => $contact_id,
 			$id_field => $id
@@ -77,7 +77,7 @@ class importTagsGroups {
 		return $this->api->$entity->create($params);
 	}
 	
-	protected function create($entity, $name_field, $name, $reserved = false) {
+	public function create($entity, $name_field, $name, $reserved = false) {
 		if ($this->api->$entity->getsingle(array($name_field => $name))) {
 			return $this->api->id;
 		}

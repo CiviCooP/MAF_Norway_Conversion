@@ -1,8 +1,12 @@
 <?php
 
+error_reporting(E_ALL);
+
 require_once('config.php');
 require_once('civi/importContacts.php');
 require_once('civi/importPledges.php');
+require_once('civi/importPledgePayments.php');
+require_once('civi/importGiver.php');
 
 class Civi {
 
@@ -35,6 +39,25 @@ class Civi {
 		
 		$this->check_requirements();
 		
+	}
+	
+	public function clearImport() {
+		$sql = "DELETE FROM `civicrm_contact` WHERE `id` > 12;
+				DELETE FROM `civicrm_relationship` WHERE `contact_id_a` > 12;
+				DELETE FROM `civicrm_relationship` WHERE `contact_id_b` > 12;
+
+				DELETE FROM `civicrm_phone` WHERE `contact_id` > 12;
+				DELETE FROM `civicrm_website` WHERE `contact_id` > 12;
+				DELETE FROM `civicrm_value_maf_norway_import_10` WHERE `entity_id` > 12;
+				DELETE FROM `civicrm_value_maf_norway_individual_8` WHERE `entity_id` > 12;
+				DELETE FROM `civicrm_email` WHERE `contact_id` > 12;
+				DELETE FROM `civicrm_entity_tag` WHERE `entity_id` > 12 AND `entity_table` = 'civicrm_contact';
+				
+				DELETE FROM `civicrm_pledge_payment`;
+				DELETE FROM `civicrm_pledge`;
+				";
+	
+		$this->civi_pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY))->execute();
 	}
 	
 	protected function check_requirements() {
@@ -104,11 +127,57 @@ class Civi {
 			</script>";
 		}
 	}
+	
+	public function importPayments() {		
+		$offset = 0;
+		if (isset($_GET['offset'])) {
+			$offset = $_GET['offset'];
+		}
+		$limit = 500;
+		$i = new importPledgePayments($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
+		if ($i->getCount() == $limit) {
+			echo "/sites/all/modules/conversion/civi.php?payments=1&offset=".($offset+$limit);
+			
+			echo "<script>
+				setTimeout('herladen()', 1000);
+   
+				function herladen() {
+					window.location = '/sites/all/modules/conversion/civi.php?payments=1&offset=".($offset+$limit)."';
+				}
+			</script>";
+		}
+	}
+	
+	public function importGivers() {		
+		$offset = 0;
+		if (isset($_GET['offset'])) {
+			$offset = $_GET['offset'];
+		}
+		$limit = 500;
+		$i = new importGiver($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
+		if ($i->getCount() == $limit) {
+			echo "/sites/all/modules/conversion/civi.php?givers=1&offset=".($offset+$limit);
+			
+			echo "<script>
+				setTimeout('herladen()', 1000);
+   
+				function herladen() {
+					window.location = '/sites/all/modules/conversion/civi.php?givers=1&offset=".($offset+$limit)."';
+				}
+			</script>";
+		}
+	}
 }
 
 $civi = new Civi(new Conversion_Config());
 if (isset($_GET['pledges']) && $_GET['pledges'] == 1) {
 	$civi->importPledges();
-} else {
+} elseif (isset($_GET['payments']) && $_GET['payments'] == 1) {
+	$civi->importPayments();
+} elseif (isset($_GET['givers']) && $_GET['givers'] == 1) {
+	$civi->importGivers();
+} elseif (isset($_GET['clear']) && $_GET['clear'] == '0123456789') {
+	$civi->clearImport();
+} elseif (isset($_GET['contact']) && $_GET['contact'] == 1) {
 	$civi->import();
 }

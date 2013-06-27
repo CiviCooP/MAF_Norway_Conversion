@@ -9,6 +9,10 @@ require_once('importINFOTYPE.php');
 require_once('importINFOPROFIL.php');
 require_once('importAVTALE.php');
 require_once('importPRODUKTTYPE.php');
+require_once('importGIVER.php');
+require_once('importINNBETALING.php');
+require_once('importPOSTERING.php');
+require_once('importAKTIVITET.php');
 
 class importfile {
 
@@ -53,6 +57,18 @@ class importfile {
 				break;
 			case 'PMF_MAF.PRODUKTTYPE.txt':
 				return new importPRODUKTTYPE($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.GIVER.txt':
+				return new importGIVER($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.INNBETALING.txt':
+				return new importINNBETALING($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.POSTERING.txt':
+				return new importPOSTERING($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.AKTIVITET.txt':
+				return new importAKTIVITET($this->pdo, $this->config);
 				break;
 		}
 		return null;

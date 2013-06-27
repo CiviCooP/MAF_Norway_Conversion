@@ -1,7 +1,6 @@
 <?php
 
-require_once('tempCustomFields.php');
-require_once('importTagsGroups.php');
+require_once('contactUtils.php');
 
 class importPledges {
 	
@@ -15,11 +14,15 @@ class importPledges {
 	
 	protected $count = 0;	
 	
+	protected $util;
+	
 	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config, $offset, $limit) {
 		$this->config = $config;
 		$this->pdo = $pdo;
 		$this->civi_pdo = $civi_pdo;
 		$this->api = $api;
+		
+		$this->util = new contactUtils($pdo, $civi_pdo, $api, $config);
 		
 		$this->count = $this->import($offset, $limit);
 	}
@@ -63,7 +66,8 @@ class importPledges {
 			}
 		}
 		
-		if (!$this->api->Contact->getsingle(array('contact_id' => $row['L_NAVN_ID']))) {
+		$contactId = $this->util->getContactIdFromNavn($row['L_NAVN_ID']);
+		if (!$contactId) {
 			echo "<span style=\"color: red;\">Contact ".$row['L_NAVN_ID']." not found</span><br>";
 			$doNotImport = true;
 		}
@@ -77,8 +81,8 @@ class importPledges {
 			return false;
 		}
 	
-		$params['contact_id'] = $row['L_NAVN_ID'];
-		$params['amount'] = $row['M_BELOEP'];
+		$params['contact_id'] = $contactId;
+		$params['amount'] = (float) str_replace(",", ".", $row['M_BELOEP']);
 		
 		$params['frequency_day'] = $row['I_TREKKDAG'];
 		if (!strlen($params['frequency_day'])) {
@@ -98,7 +102,7 @@ class importPledges {
 		}
 		
 		if ($this->api->Pledge->Create($params)) {
-			echo "<span style=\"color: green;\">Created pledge for contact ".$row['L_NAVN_ID'].": ".$this->api->id."</span><br>";
+			echo "<span style=\"color: green;\">Created pledge for contact ".$contactId.": ".$this->api->id."</span><br>";
 			return true;
 		}
 		return false;

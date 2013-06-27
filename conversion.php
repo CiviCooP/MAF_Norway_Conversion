@@ -1,5 +1,6 @@
 <?php
 
+error_reporting(E_ALL);
 require_once('config.php');
 require_once('library/importfile.php');
 
@@ -32,8 +33,15 @@ class Conversion {
 	}
 	
 	public function importPledges() {
+		$this->importfile('PMF_MAF.INNBETALING.txt'); //Payments
+		$this->importfile('PMF_MAF.POSTERING.txt'); //Payments
+		$this->importfile('PMF_MAF.GIVER.txt'); //contributions
 		$this->importfile('PMF_MAF.AVTALE.txt'); //pledges
 		$this->importfile('PMF_MAF.PRODUKTTYPE.txt'); //financial types
+	}
+	
+	public function importAktiviteit() {
+		$this->importfile('PMF_MAF.AKTIVITET.txt'); //Activiteit (KID number)
 	}
 	
 	protected function importFile($name) {
@@ -42,8 +50,11 @@ class Conversion {
 }
 
 $conversion = new Conversion(new Conversion_Config());
-if ($_GET['pledges'] == 1) {
+
+if (isset($_GET['pledges']) && $_GET['pledges'] == 1) {
 	$conversion->importPledges();
-} else {
+} elseif (isset($_GET['aktiviteit']) && $_GET['aktiviteit'] == 1) {
+	$conversion->importAktiviteit();
+} elseif (isset($_GET['contact']) && $_GET['contact'] == 1) {
 	$conversion->import();
 }
