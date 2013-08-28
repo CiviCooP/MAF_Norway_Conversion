@@ -96,13 +96,13 @@ class Civi {
 		$limit = 300;
 		$i = new importContacts($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
 		if ($i->getCount() == $limit) {
-			echo "/sites/all/modules/conversion/civi.php?offset=".($offset+$limit);
+			echo "/sites/all/modules/conversion/civi.php?contact=1&offset=".($offset+$limit);
 			
 			echo "<script>
 				setTimeout('herladen()', 1000);
    
 				function herladen() {
-					window.location = '/sites/all/modules/conversion/civi.php?offset=".($offset+$limit)."';
+					window.location = '/sites/all/modules/conversion/civi.php?contact=1&offset=".($offset+$limit)."';
 				}
 			</script>";
 		}

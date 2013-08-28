@@ -345,7 +345,7 @@ class importContacts {
 				break;
 			case 'F': //Firma = Company
 			case 'G': //Forening = Association
-			case 'H': //Flypas = airport
+			case 'H': //Flyplass = airport
 			case 'O': //Organisasjon = organisation
 				$params['contact_type'] = 'Organization';
 				break;

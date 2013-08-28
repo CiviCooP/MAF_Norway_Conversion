@@ -1,6 +1,7 @@
 <?php
 
 require_once('contactUtils.php');
+require_once('importTagsGroups.php');
 
 class importPledges {
 	
@@ -16,6 +17,8 @@ class importPledges {
 	
 	protected $util;
 	
+	protected $tags;
+	
 	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config, $offset, $limit) {
 		$this->config = $config;
 		$this->pdo = $pdo;
@@ -23,6 +26,7 @@ class importPledges {
 		$this->api = $api;
 		
 		$this->util = new contactUtils($pdo, $civi_pdo, $api, $config);
+		$this->tags = new importTagsGroups($pdo, $civi_pdo, $api, $config);
 		
 		$this->count = $this->import($offset, $limit);
 	}
@@ -78,6 +82,15 @@ class importPledges {
 		}
 		
 		if ($doNotImport) {
+			return false;
+		}
+		
+		if ($row['A_PRODUKTTYPE_ID'] == 'ME') {
+			// do not import because this is a member. But add a tag to the contact saying that this is a member.
+			$tag_id = $this->tags->create('Tag', 'name', 'Membership', false);
+			if ($tag_id !== false) {
+				$this->tags->add('EntityTag', 'tag_id', $tag_id, $contactId);
+			}
 			return false;
 		}
 	
