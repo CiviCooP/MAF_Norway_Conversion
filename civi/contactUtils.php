@@ -59,4 +59,50 @@ class contactUtils {
 		return false;
 	}
 	
+	public function getContactType($name, $label, $parent_id) {
+		if ($this->api->ContactType->getsingle(array('name' => $name))) {
+			return $this->api->result->name;
+		}
+		$params = array(
+			'name' => $name,
+			'label' => $label,
+			'parent_id' => $parent_id,
+			'is_active' => '1',
+		);
+		
+		if ($this->api->ContactType->create($params)) {
+			return $this->api->values[0]->name;
+		}
+		return false;
+	}
+	
+	public function getReason($reason) {
+		switch($reason) {
+			case 'A':
+				return 'Ukjent grunn'; //unknown reasons
+				break;
+			case 'U':
+				return 'Adresse ukjent'; //unknown address
+				break;
+			case 'V':
+				return 'Død'; //dead
+				break;
+			case 'C1':
+				return 'Dublett'; //double
+				break;
+			case 'EØ':
+				return 'Etter eget ønske'; //contact requested to stop
+				break;
+			case 'PM':
+				return 'Potensielt medlem'; //potential member
+				break;
+		}
+		return false;
+	}
+	
+	public function formatDate($date) {
+		$d = new DateTime($date);
+		return $d->format('Y-m-d');
+	}
+	
 }

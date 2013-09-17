@@ -40,8 +40,17 @@ class Conversion {
 		$this->importfile('PMF_MAF.PRODUKTTYPE.txt'); //financial types
 	}
 	
+	public function importAksjon() {
+		$this->importfile('PMF_MAF.AKSJONSTYPE.txt');
+		$this->importfile('PMF_MAF.AKSJONSINFOTYPE.txt');
+		$this->importfile('PMF_MAF.AKSJONSINFO.txt');
+		$this->importfile('PMF_MAF.AKSJON.txt'); //Aksjons
+		
+	}
+	
 	public function importAktiviteit() {
 		$this->importfile('PMF_MAF.AKTIVITET.txt'); //Activiteit (KID number)
+		$this->importfile('PMF_MAF.AKTIVITETSTYPE.txt'); //Activity types
 	}
 	
 	protected function importFile($name) {
@@ -55,6 +64,8 @@ if (isset($_GET['pledges']) && $_GET['pledges'] == 1) {
 	$conversion->importPledges();
 } elseif (isset($_GET['aktiviteit']) && $_GET['aktiviteit'] == 1) {
 	$conversion->importAktiviteit();
+} elseif (isset($_GET['aksjon']) && $_GET['aksjon'] == 1) {
+	$conversion->importAksjon();
 } elseif (isset($_GET['contact']) && $_GET['contact'] == 1) {
 	$conversion->import();
 }

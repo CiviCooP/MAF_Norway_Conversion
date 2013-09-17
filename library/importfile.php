@@ -13,6 +13,11 @@ require_once('importGIVER.php');
 require_once('importINNBETALING.php');
 require_once('importPOSTERING.php');
 require_once('importAKTIVITET.php');
+require_once('importAKSJON.php');
+require_once('importAKSJONSINFO.php');
+require_once('importAKSJONSINFOTYPE.php');
+require_once('importAKSJONSTYPE.php');
+require_once('importAKTIVITETSTYPE.php');
 
 class importfile {
 
@@ -69,6 +74,21 @@ class importfile {
 				break;
 			case 'PMF_MAF.AKTIVITET.txt':
 				return new importAKTIVITET($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.AKTIVITETSTYPE.txt':
+				return new importAKTIVITETSTYPE($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.AKSJON.txt':
+				return new importAKSJON($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.AKSJONSINFO.txt':
+				return new importAKSJONSINFO($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.AKSJONSINFOTYPE.txt':
+				return new importAKSJONSINFOTYPE($this->pdo, $this->config);
+				break;
+			case 'PMF_MAF.AKSJONSTYPE.txt':
+				return new importAKSJONSTYPE($this->pdo, $this->config);
 				break;
 		}
 		return null;

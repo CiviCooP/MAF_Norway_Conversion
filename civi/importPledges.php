@@ -19,6 +19,8 @@ class importPledges {
 	
 	protected $tags;
 	
+	protected $fields;
+	
 	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config, $offset, $limit) {
 		$this->config = $config;
 		$this->pdo = $pdo;
@@ -26,7 +28,17 @@ class importPledges {
 		$this->api = $api;
 		
 		$this->util = new contactUtils($pdo, $civi_pdo, $api, $config);
+		$this->fields = new tempCustomFields($pdo, $api, $config);
 		$this->tags = new importTagsGroups($pdo, $civi_pdo, $api, $config);
+		
+		$this->civi_pdo->exec("CREATE TABLE IF NOT EXISTS `civicrm_contribution_recur_import` (
+			`recur_id` int(10) unsigned NOT NULL,
+			`aksjon_id` int(10) unsigned NOT NULL,
+			`navn_id` int(10) unsigned NOT NULL,
+			`produktttpe` varchar(32) NOT NULL default '',
+			PRIMARY KEY (`recur_id`)
+			) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+		");
 		
 		$this->count = $this->import($offset, $limit);
 	}
@@ -81,6 +93,23 @@ class importPledges {
 			$doNotImport = true;
 		}
 		
+		$payment_type = false;
+		switch($row['I_BETALINGSMAATE']) {
+			case '0': //Bank - OCR (imported through OCR-file from the bank, with KID-numbers) = printed giro
+				$payment_type = 3; //printed giro
+				break;
+			case '5': //Bank - AvtaleGiro (also imported through OCR-file from the bank, with KID-numbers) = Avtala Giro
+				$payment_type = 2; //Avtale giro
+				break;
+			case '6': //Bank - Overføring (manually registred payments from the bank) = Donor Managed
+				$payment_type = 1; //Donor Managed
+				break;
+		}
+		
+		if (!$payment_type) {
+			$doNotImport = false;
+		}
+		
 		if ($doNotImport) {
 			return false;
 		}
@@ -95,55 +124,58 @@ class importPledges {
 		}
 	
 		$params['contact_id'] = $contactId;
-		$params['amount'] = (float) str_replace(",", ".", $row['M_BELOEP']);
-		
-		$params['frequency_day'] = $row['I_TREKKDAG'];
-		if (!strlen($params['frequency_day'])) {
-			$params['frequency_day'] = '1';
-		}
 		$params['create_date'] = $row['D_REGDATO'];
 		
 		//paid to be in periods
 		$this->determinePeriods($params, $row);
 		
 		//determine payment method
-		$this->determinPaymentMethod($params, $row);
+		//$this->determinPaymentMethod($params, $row);
 		
 		if ($row['D_SLUTTDATO'] !== null) {
 			$slutt = new DateTime($row['D_SLUTTDATO']);
 			$params['end_date'] = $slutt->format('Y-m-d');
 		}
 		
-		if ($this->api->Pledge->Create($params)) {
-			echo "<span style=\"color: green;\">Created pledge for contact ".$contactId.": ".$this->api->id."</span><br>";
+		$params['custom_'.$this->fields->getCustomField('contributionrecur_aksjon_id')] = $row['L_AKSJON_ID'];
+		
+		if ($this->api->ContributionRecur->Create($params)) {
+			$recur_id = $this->api->id;
+			$activity_id = $this->getActivity($row);
+			if (!$activity_id) {
+				$activity_id = 0;
+			}
+			
+			$this->civi_pdo->exec("INSERT INTO `civicrm_contribution_recur_offline` (`recur_id`, `maximum_amount`, `payment_type_id`, `activity_id`) VALUES ('".$recur_id."', '".$params['amount']."', '".$payment_type."', '".$activity_id."');");
+			$this->civi_pdo->exec("INSERT INTO `civicrm_contribution_recur_import` (`recur_id`, `aksjon_id`, `navn_id`, `produktttpe`) VALUES ('".$recur_id."', '".$row['L_AKSJON_ID']."', '".$row['L_NAVN_ID']."', '".$row['A_PRODUKTTYPE_ID']."');");
+		
+			echo "<span style=\"color: green;\">Created pledge for contact ".$contactId.": ".$recur_id."</span><br>";
 			return true;
 		}
 		return false;
 	}
 	
-	protected function determinPaymentMethod(&$params, $row) {
-		$r = $this->findProduktType($row['A_PRODUKTTYPE_ID']);
-		$type = $r['A_PRODUKTTYPENAVN'];
-		$createNew = true;
-		if ($this->api->FinancialType->get(array('name' => $type))) {
-			if ($this->api->count > 1) {
-				$params['pledge_financial_type_id'] = $this->api->values[0]->id;
-				$createNew = false;
-			} elseif ($this->api->count == 1) {
-				$params['pledge_financial_type_id'] = $this->api->id;
-				$createNew = false;
-			}
-		} 
-		if ($createNew) {
-			$create['name'] = $type;
-			$create['is_active'] = '1';
-			$create['is_reserved'] = '0';
-			$create['is_deductible'] = '0';
-			
-			if ($this->api->FinancialType->Create($create)) {
-				$params['pledge_financial_type_id'] = $this->api->id;
-			}
+	protected function getActivity($row) {
+		$activity = false;
+		
+		
+		$group = $this->fields->getCustomGroup('maf_norway_aksjon_import');
+		if (!$group) {
+			return false;
 		}
+		$field = $this->fields->getCustomFieldFull('aksjon_id');
+		if (!$field) {
+			return false;
+		}
+		
+		$sql = "SELECT `entity_id` FROM `".$group->table_name."` WHERE `".$field->column_name."` = '".$row['L_AKSJON_ID']."';";
+		$stmnt = $this->civi_pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
+		$stmnt->execute();
+		if ($r = $stmnt->fetch()) {
+			return $r['entity_id'];
+		}
+		
+		return false;
 	}
 	
 	protected function determinePeriods(&$params, $row) {
@@ -223,8 +255,9 @@ class importPledges {
 			$day = '1';
 		}
 		$params['start_date'] = '2013-'.$first_period.'-'.$day;
+		$params['next_sched_contribution'] = '2013-'.$first_period.'-'.$day;
 		$params['frequency_unit'] = 'month';
 		$params['frequency_interval'] = $diff;
-		$params['installments'] = count($periods);
+		$params['amount']  = $interval_amount;
 	}
 }

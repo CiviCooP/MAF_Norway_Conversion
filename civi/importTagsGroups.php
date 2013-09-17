@@ -10,11 +10,15 @@ class importTagsGroups {
 	
 	protected $api;
 	
+	protected $utils;
+	
 	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config) {
 		$this->config = $config;
 		$this->pdo = $pdo;
 		$this->civi_pdo = $civi_pdo;
 		$this->api = $api;
+		
+		$this->utils = new contactUtils($pdo, $civi_pdo, $api, $config);
 	}
 	
 	public function import($civi_contact_id, $l_navn_id) {
@@ -60,7 +64,7 @@ class importTagsGroups {
 	
 	protected function importGroup($civi_contact_id, $l_navn_id, $row) {
 		$group = $row['A_BESKRIVELSE'];
-		$group_id = $this->create('Group', 'title', $group, true);
+		$group_id = $this->create('Group', 'title', $group, false);
 		if ($group_id !== false) {
 			$this->add('GroupContact', 'group_id', $group_id, $civi_contact_id, $row['D_FRADATO']);
 		}
@@ -72,7 +76,7 @@ class importTagsGroups {
 			$id_field => $id
 		);
 		if ($in_date !== false) {
-			$params['in_date'] = $in_date;
+			$params['in_date'] = $this->utils->formatDate($in_date);
 		}
 		return $this->api->$entity->create($params);
 	}
@@ -91,10 +95,16 @@ class importTagsGroups {
 			}
 			$params['parents'] = $pid;
 		}
-		if ($reserved && strtolower($entity) == 'group') {
-			$params['is_active'] = '0';
+		if (strtolower($entity) == 'group') {
+			$params['is_active'] = '1';
+			$params['is_reserved'] = '0';
+			$params['is_hidden'] = '0';
+		} elseif (strtolower($entity) == 'tag') {
+			$params['is_selectable'] = '1';
+			$params['is_reserved'] = '0';
+		}
+		if ($reserved) {
 			$params['is_reserved'] = '1';
-			$params['is_hidden'] = '1';
 		}
 		
 		if ($this->api->$entity->create($params)) {

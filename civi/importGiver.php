@@ -61,6 +61,8 @@ class importGiver {
 			return;
 		}
 		
+		$this->undeleteContact($contactId);
+		
 		$ThankYouLetters = $row['A_TAKKEBREV'] == 'N' ? false : true;
 		$this->updateContact($contactId, $ThankYouLetters);
 		
@@ -69,10 +71,18 @@ class importGiver {
 		if ($api->Relationship->get(array('contact_id_b' => $contactId))) {
 			foreach($api->values as $value) {
 				if ($value->relationship_type_id == 7 || $value->relationship_type_id == 8) {
+					$this->undeleteContact($value->contact_id_a);
 					$this->updateContact($value->contact_id_a, $ThankYouLetters);
 				}
 			}
 		}
+	}
+	
+	protected function undeleteContact($contactId) {
+		$params['contact_id'] = $contactId;
+		$params['is_deleted'] = '0';
+		$params['version'] = 3;
+		$this->api->Contact->Create($params);
 	}
 	
 	protected function updateContact($contactId, $ThankYouLetters) {

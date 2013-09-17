@@ -2,26 +2,16 @@
 
 require_once('importer.php');
 
-class importAKTIVITET extends importer {
+class importAKSJON extends importer {
 
 	protected function getFilename() {
-		return "PMF_MAF.AKTIVITET.txt";
+		return "PMF_MAF.AKSJON.txt";
 	}
 	
 	protected function getColumnDefinition($name) {
 		$column = parent::getColumnDefinition($name);
 		switch ($name) {
-			case 'L_NAVN_ID':
-				$column->is_primary = false;
-				$column->type = "INT";
-				$column->length = 10;
-				break;
 			case 'L_AKSJON_ID':
-				$column->is_primary = false;
-				$column->type = "INT";
-				$column->length = 10;
-				break;
-			case 'L_AKTIVITET_ID':
 				$column->is_primary = false;
 				$column->type = "INT";
 				$column->length = 10;

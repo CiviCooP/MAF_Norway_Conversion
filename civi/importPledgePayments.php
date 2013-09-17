@@ -16,6 +16,8 @@ class importPledgePayments {
 	
 	protected $util;
 	
+	protected $fields;
+	
 	protected $payment_methods = array(
 		'0' => 'OCR-giro',
 		'5' => 'AvtaleGiro',
@@ -36,6 +38,7 @@ class importPledgePayments {
 		$this->api = $api;
 		
 		$this->util = new contactUtils($pdo, $civi_pdo, $api, $config);
+		$this->fields = new tempCustomFields($pdo, $api, $config);
 		
 		$this->count = $this->import($offset, $limit);
 	}
@@ -111,30 +114,44 @@ class importPledgePayments {
 			}
 		}
 		
-		if ($this->api->CustomField->getsingle(array('name' => 'Aksjon_ID'))) {
-			if ($row['L_AKSJON_ID']) {
-				$params['custom_'.$this->api->id] = $row['L_AKSJON_ID'];
-			}
-		}
-		
-		if ($this->api->CustomField->getsingle(array('name' => 'Orgininal_contact_ID'))) {
-			if ($row['L_NAVN_ID']) {
-				$params['custom_'.$this->api->id] = $row['L_NAVN_ID'];
-			}
-		}
-		
-		if ($this->api->CustomField->getsingle(array('name' => 'Aktivitet_ID'))) {
-			if ($row['I_L_AKTIVITET_ID']) {
-				$params['custom_'.$this->api->id] = $row['I_L_AKTIVITET_ID'];
-			}
+		if ($row['L_AKSJON_ID']) {
+				$params['custom_'.$this->fields->getCustomField('contribution_aksjon_id')] = $row['L_AKSJON_ID'];
 		}
 		
 		if ($this->api->Contribution->Create($params)) {
 			$contribution_id = $this->api->id;
 			$status_id = $this->api->values[0]->contribution_status_id;
 			echo "<span style=\"color: green;\">Created payment for contact ".$contactId.": ".$this->api->id."</span><br>";
+			//check for contribution recur
+			$this->checkContributionRecur($row, $contactId, $contribution_id, $status_id, $financial_type_id);
 			//check for pledge			
-			$this->checkPledge($row, $contactId, $contribution_id, $status_id, $financial_type_id);
+			//$this->checkPledge($row, $contactId, $contribution_id, $status_id, $financial_type_id);
+		}
+	}
+	
+	protected function checkContributionRecur($row, $contactId, $contribution_id, $status_id, $financial_type_id) {
+		//check if contribution is a recurring contribution
+		
+		$stmnt = $this->civi_pdo->prepare("SELECT * FROM `civicrm_contribution_recur_import` WHERE `navn_id` = '".$row['L_NAVN_ID']."' AND `produktttpe` = '".$row['A_PRODUKTTYPE_ID']."';", array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
+		$stmnt->execute();
+		$recur = $stmnt->fetch();
+		if (!$recur) {
+			return;
+		}
+		
+		if ($this->api->ContributionRecur->getsingle(array('id' => $recur['recur_id']))) {
+			$temp_date = strtotime($this->api->next_sched_contribution);
+			$next_collectionDate = strtotime ("+".$this->api->result->frequency_interval." ".$this->api->result->frequency_unit, $temp_date);
+			$next_collectionDate = date('YmdHis', $next_collectionDate);
+			
+			$params['id']  = $recur['recur_id'];
+			$params['next_sched_contribution'] = $next_collectionDate;
+			$this->api->ContributionRecur->create($params);
+			
+			unset($params);
+			$params['id']  = $contribution_id;
+			$params['contribution_recur_id']  = $recur['recur_id'];
+			$this->api->Contribution->Create($params);
 		}
 	}
 	
@@ -178,6 +195,16 @@ class importPledgePayments {
 	}
 	
 	protected function findPledge($row) {
+		$sql = "SELECT * FROM `PMF_MAF_AVTALE_txt` `p` WHERE `A_PRODUKTTYPE_ID` = '".$row['A_PRODUKTTYPE_ID']."' AND `L_NAVN_ID` = '".$row['L_NAVN_ID']."'";
+		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
+		$stmnt->execute();
+		if ($stmnt->rowCount()) {
+			return $stmnt->fetch();
+		}
+		return false;
+	}
+	
+	protected function findContributionRecur($row) {
 		$sql = "SELECT * FROM `PMF_MAF_AVTALE_txt` `p` WHERE `A_PRODUKTTYPE_ID` = '".$row['A_PRODUKTTYPE_ID']."' AND `L_NAVN_ID` = '".$row['L_NAVN_ID']."'";
 		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
 		$stmnt->execute();
