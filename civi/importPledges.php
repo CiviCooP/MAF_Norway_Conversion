@@ -21,6 +21,12 @@ class importPledges {
 	
 	protected $fields;
 	
+	protected $tag_pt_1;
+	protected $tag_pt_2;
+	protected $tag_pt_3;
+	
+	protected $tag_recurring_id;
+	
 	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config, $offset, $limit) {
 		$this->config = $config;
 		$this->pdo = $pdo;
@@ -39,6 +45,11 @@ class importPledges {
 			PRIMARY KEY (`recur_id`)
 			) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 		");
+		
+		$this->tag_recurring_id = $this->tags->create('Tag', 'name', 'Has active recurring contribution', false);
+		$this->tag_pt_3 = $this->tags->create('Tag', 'name', 'Recurring contribution: Printed giro', false);
+		$this->tag_pt_2 = $this->tags->create('Tag', 'name', 'Recurring contribution: Avtale giro', false);
+		$this->tag_pt_1 = $this->tags->create('Tag', 'name', 'Recurring contribution: Donor Managed', false);
 		
 		$this->count = $this->import($offset, $limit);
 	}
@@ -72,16 +83,8 @@ class importPledges {
 	}
 	
 	protected function importPledge($row) {
-	
-		$doNotImport = false;
-		if ($row['D_SLUTTDATO'] !== null) {
-			$slutt = new DateTime($row['D_SLUTTDATO']);
-			if ($slutt->format('Y') < 2013) {
-				$doNotImport = true;
-				echo "<span style=\"color: orange;\">D_SLUTTDATO: ".$slutt->format('d-m-Y')."</span><br />";
-			}
-		}
 		
+		$doNotImport = false;
 		$contactId = $this->util->getContactIdFromNavn($row['L_NAVN_ID']);
 		if (!$contactId) {
 			echo "<span style=\"color: red;\">Contact ".$row['L_NAVN_ID']." not found</span><br>";
@@ -114,6 +117,22 @@ class importPledges {
 			return false;
 		}
 		
+		if ($row['D_STOPP_FRA'] !== null) {
+			$slutt = new DateTime($row['D_STOPP_FRA']);
+			if ($slutt->format('Y') < 2013) {
+				if ($row['A_STOPPAARSAK'] != 'PM') {
+					//do not import because member is an old donor. But tag the contact insetad
+					$tag_id = $this->tags->create('Tag', 'name', 'Has been donor in the past', false);
+					if ($tag_id !== false) {
+						$this->tags->add('EntityTag', 'tag_id', $tag_id, $contactId);
+					}
+				}
+				echo "<span style=\"color: orange;\">D_SLUTTDATO: ".$slutt->format('d-m-Y')."</span><br />";
+				return false;
+				
+			}
+		}
+		
 		if ($row['A_PRODUKTTYPE_ID'] == 'ME') {
 			// do not import because this is a member. But add a tag to the contact saying that this is a member.
 			$tag_id = $this->tags->create('Tag', 'name', 'Membership', false);
@@ -130,11 +149,32 @@ class importPledges {
 		$this->determinePeriods($params, $row);
 		
 		//determine payment method
-		//$this->determinPaymentMethod($params, $row);
+		$this->determinPaymentMethod($params, $row);
 		
 		if ($row['D_SLUTTDATO'] !== null) {
 			$slutt = new DateTime($row['D_SLUTTDATO']);
 			$params['end_date'] = $slutt->format('Y-m-d');
+		} else {
+			if ($this->tag_recurring_id !== false) {
+				$this->tags->add('EntityTag', 'tag_id', $this->tag_recurring_id, $contactId);
+			}
+			switch($payment_type) {
+				case 1:
+					if ($this->tag_pt_1 !== false) {
+						$this->tags->add('EntityTag', 'tag_id', $this->tag_pt_1, $contactId);
+					}
+					break;
+				case 2:
+					if ($this->tag_pt_2 !== false) {
+						$this->tags->add('EntityTag', 'tag_id', $this->tag_pt_2, $contactId);
+					}
+					break;
+				case 3:
+					if ($this->tag_pt_3 !== false) {
+						$this->tags->add('EntityTag', 'tag_id', $this->tag_pt_3, $contactId);
+					}
+					break;
+			}
 		}
 		
 		$params['custom_'.$this->fields->getCustomField('contributionrecur_aksjon_id')] = $row['L_AKSJON_ID'];
@@ -259,5 +299,37 @@ class importPledges {
 		$params['frequency_unit'] = 'month';
 		$params['frequency_interval'] = $diff;
 		$params['amount']  = $interval_amount;
+	}
+	
+	protected function determinPaymentMethod(&$params, $row) {
+		$r = $this->findProduktType($row['A_PRODUKTTYPE_ID']);
+		$type = $r['A_PRODUKTTYPENAVN'];
+		$createNew = true;
+		if ($this->api->FinancialType->get(array('name' => $type))) {
+			if ($this->api->count > 1) {
+				$params['financial_type_id'] = $this->api->values[0]->id;
+				$createNew = false;
+			} elseif ($this->api->count == 1) {
+				$params['financial_type_id'] = $this->api->id;
+				$createNew = false;
+			}
+		} 
+		if ($createNew) {
+			$create['name'] = $type;
+			$create['is_active'] = '1';
+			$create['is_reserved'] = '0';
+			$create['is_deductible'] = '0';
+			
+			if ($this->api->FinancialType->Create($create)) {
+				$params['financial_type_id'] = $this->api->id;
+			}
+		}
+	}
+	
+	protected function findProduktType($id) {
+		$sql = "SELECT * FROM `PMF_MAF_PRODUKTTYPE_txt` `p` WHERE `A_PRODUKTTYPE_ID` = '".$id."'";
+		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
+		$stmnt->execute();
+		return $stmnt->fetch();
 	}
 }

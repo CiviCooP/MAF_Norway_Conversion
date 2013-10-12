@@ -81,15 +81,20 @@ class importAksjon {
 			return;
 		}
 		
-		$params['source_contact_id'] = 1; 
-		$params['activity_type_id'] = $activity_type;
-		$params['custom_'.$this->fields->getCustomField('aksjon_id')] = $row['L_AKSJON_ID'];
-		$params['subject'] = $row['A_BESKRIVELSE'];
-		$params['activity_date_time'] = $this->util->formatDate($row['D_UTSENDTDATO']);
-		$params['status_id']  = 2; //completed
-		
-		if ($this->api->Activity->Create($params)) {
-			$activity_id = $this->api->id;
+		$sql = "SELECT COUNT(*) AS `total`, D_DATO FROM `PMF_MAF_AKTIVITET_txt` WHERE `L_AKSJON_ID` = '".$row['L_AKSJON_ID']."' GROUP BY D_DATO ORDER BY `total`";
+		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
+		$stmnt->execute();
+		if ($r = $stmnt->fetch()) {		
+			$params['source_contact_id'] = 1; 
+			$params['activity_type_id'] = $activity_type;
+			$params['custom_'.$this->fields->getCustomField('aksjon_id')] = $row['L_AKSJON_ID'];
+			$params['subject'] = $row['A_BESKRIVELSE'];
+			$params['activity_date_time'] = $this->util->formatDate($r['D_DATO']);
+			$params['status_id']  = 2; //completed
+			
+			if ($this->api->Activity->Create($params)) {
+				$activity_id = $this->api->id;
+			}
 		}
 	}
 	

@@ -47,12 +47,12 @@ class contactUtils {
 	}
 	
 	protected function checkDuplicate($navn_id) {
-		$sql = "SELECT * FROM `PMF_MAF_NAVN_txt` `p` WHERE `L_DUPLIKATVINNER_ID` = '".$navn_id."'";
+		$sql = "SELECT * FROM `PMF_MAF_NAVN_txt` `p` WHERE `L_NAVN_ID` = '".$navn_id."'";
 		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
 		$stmnt->execute();
 		if ($stmnt->rowCount()) {
 			$row = $stmnt->fetch();
-			if ($this->api->Contact->getsingle(array('contact_id' => $row['L_NAVN_ID']))) {
+			if ($this->api->Contact->getsingle(array('contact_id' => $row['L_DUPLIKATVINNER_ID']))) {
 				return $this->api->id;
 			}
 		}
@@ -103,6 +103,23 @@ class contactUtils {
 	public function formatDate($date) {
 		$d = new DateTime($date);
 		return $d->format('Y-m-d');
+	}
+	
+	public function convertStrToFloat($str) {
+		$s = str_replace(".", "", $str);
+		$parts = explode(",", $s);
+		$int = (int) $parts[0];
+		$f = 0;
+		if (isset($parts[1])) {
+			$f = (float) ('.'.$parts[1]);
+		}
+		if ($int < 0) {
+			$float = (float) $int - $f;
+		} else {
+			$float = (float) $int + $f;
+		}
+		$float = number_format($float, 2, ',', '');
+		return $float;
 	}
 	
 }

@@ -18,6 +18,8 @@ class importPledgePayments {
 	
 	protected $fields;
 	
+	protected $debug = false;
+	
 	protected $payment_methods = array(
 		'0' => 'OCR-giro',
 		'5' => 'AvtaleGiro',
@@ -31,11 +33,13 @@ class importPledgePayments {
 	
 	protected $payment_options_group = 10;
 	
-	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config, $offset, $limit) {
+	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config, $offset, $limit, $debug=false) {
 		$this->config = $config;
 		$this->pdo = $pdo;
 		$this->civi_pdo = $civi_pdo;
 		$this->api = $api;
+		
+		$this->debug = $debug;
 		
 		$this->util = new contactUtils($pdo, $civi_pdo, $api, $config);
 		$this->fields = new tempCustomFields($pdo, $api, $config);
@@ -48,7 +52,12 @@ class importPledgePayments {
 	}
 	
 	protected function findPayments($offset, $limit) {
-		$sql = "SELECT `p`.*, `i`.`I_BETALINGSMAATE`, `i`.`L_AKSJON_ID`, `i`.`D_DATO`, `i`.`L_AKTIVITET_ID` AS `I_L_AKTIVITET_ID` FROM `PMF_MAF_POSTERING_txt` `p` LEFT JOIN `PMF_MAF_INNBETALING_txt` AS `i` ON `p`.`L_INNBETALING_ID` = `i`.`L_INNBETALING_ID` WHERE YEAR(`i`.`D_DATO`) = 2013 LIMIT ".$offset .", ". $limit;
+		if ($this->debug) {
+			$cids = array(25251, 17600,75870, 76452, 72699, 68849,61000);
+			$sql = "SELECT `p`.*, `i`.`I_BETALINGSMAATE`, `i`.`L_AKSJON_ID`, `i`.`D_DATO`, `i`.`L_AKTIVITET_ID` AS `I_L_AKTIVITET_ID`, `i`.`L_INNBETALINGSBUNKE_ID` as `L_INNBETALINGSBUNKE_ID` FROM `PMF_MAF_POSTERING_txt` `p` LEFT JOIN `PMF_MAF_INNBETALING_txt` AS `i` ON `p`.`L_INNBETALING_ID` = `i`.`L_INNBETALING_ID` WHERE `p`.`L_INNBETALING_ID` IN(".implode(",", $cids).") LIMIT ".$offset .", ". $limit;
+		} else {
+			$sql = "SELECT `p`.*, `i`.`I_BETALINGSMAATE`, `i`.`L_AKSJON_ID`, `i`.`D_DATO`, `i`.`L_AKTIVITET_ID` AS `I_L_AKTIVITET_ID`, `i`.`L_INNBETALINGSBUNKE_ID` as `L_INNBETALINGSBUNKE_ID` FROM `PMF_MAF_POSTERING_txt` `p` LEFT JOIN `PMF_MAF_INNBETALING_txt` AS `i` ON `p`.`L_INNBETALING_ID` = `i`.`L_INNBETALING_ID` LIMIT ".$offset .", ". $limit;
+		}
 		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
 		$stmnt->execute();
 		return $stmnt;
@@ -91,6 +100,9 @@ class importPledgePayments {
 	protected function importPledgePayment($row) {
 		$doNotImport = false;
 		$contactId = $this->util->getContactIdFromNavn($row['L_NAVN_ID']);
+		if ($this->debug) {
+			$contactId = 1;
+		}
 		if (!$contactId) {
 			echo "<span style=\"color: red;\">Contact ".$row['L_NAVN_ID']." not found</span><br>";
 			$doNotImport = true;			
@@ -100,8 +112,8 @@ class importPledgePayments {
 			return;
 		}
 	
-		$params['contact_id'] = $contactId;
-		$params['total_amount'] = (float) str_replace(",", ".", $row['M_BELOEP']);
+		$params['contact_id'] = $contactId;		
+		$params['total_amount'] = $this->util->convertStrToFloat($row['M_BELOEP']);
 		$params['receive_date'] = $row['D_DATO'];
 		
 		$this->determinPaymentMethod($params, $row);
@@ -115,7 +127,14 @@ class importPledgePayments {
 		}
 		
 		if ($row['L_AKSJON_ID']) {
-				$params['custom_'.$this->fields->getCustomField('contribution_aksjon_id')] = $row['L_AKSJON_ID'];
+			$params['custom_'.$this->fields->getCustomField('contribution_aksjon_id')] = $row['L_AKSJON_ID'];
+		}
+		
+		if ($row['L_INNBETALINGSBUNKE_ID']) {
+			$balanskonto = $this->getBalansKonto($row['L_INNBETALINGSBUNKE_ID']);
+			if ($balanskonto) {
+				$params['custom_'.$this->fields->getCustomField('contribution_balanskonto')] = $balanskonto;
+			}
 		}
 		
 		if ($this->api->Contribution->Create($params)) {
@@ -131,6 +150,10 @@ class importPledgePayments {
 	
 	protected function checkContributionRecur($row, $contactId, $contribution_id, $status_id, $financial_type_id) {
 		//check if contribution is a recurring contribution
+		
+		if ($this->debug) {
+			return;
+		}
 		
 		$stmnt = $this->civi_pdo->prepare("SELECT * FROM `civicrm_contribution_recur_import` WHERE `navn_id` = '".$row['L_NAVN_ID']."' AND `produktttpe` = '".$row['A_PRODUKTTYPE_ID']."';", array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
 		$stmnt->execute();
@@ -211,6 +234,19 @@ class importPledgePayments {
 		return $stmnt->rowCount();
 	}
 	
+	protected function getBalansKonto($innbetalingsbunke) {
+		$sql = "SELECT * FROM `PMF_MAF_INNBETALINGSBUNKE_txt` `p` WHERE `L_INNBETALINGSBUNKE_ID` = '".$innbetalingsbunke."'";
+		$stmnt = $this->pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
+		$stmnt->execute();
+		if ($stmnt->rowCount()) {
+			$row = $stmnt->fetch();
+			if ($row) {
+				return $row['L_BALANSEKONTO'];
+			}
+		}
+		return false;
+	}
+	
 	protected function determinPaymentMethod(&$params, $row) {
 		$r = $this->findProduktType($row['A_PRODUKTTYPE_ID']);
 		$type = $r['A_PRODUKTTYPENAVN'];
@@ -233,6 +269,10 @@ class importPledgePayments {
 			if ($this->api->FinancialType->Create($create)) {
 				$params['financial_type_id'] = $this->api->id;
 			}
+		}
+		
+		if ($this->debug) {
+			$params['financial_type_id'] = 10;
 		}
 	}
 }

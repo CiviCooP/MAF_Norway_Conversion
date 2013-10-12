@@ -64,6 +64,11 @@ class importTagsGroups {
 	
 	protected function importGroup($civi_contact_id, $l_navn_id, $row) {
 		$group = $row['A_BESKRIVELSE'];
+		
+		if ($row['I_INFOTYPE_ID'] == '8') {
+			$group .= ' ('.$row['I_ANTALL_ENHETER'].')';
+		}
+		
 		$group_id = $this->create('Group', 'title', $group, false);
 		if ($group_id !== false) {
 			$this->add('GroupContact', 'group_id', $group_id, $civi_contact_id, $row['D_FRADATO']);

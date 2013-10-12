@@ -11,6 +11,7 @@ require_once('importAVTALE.php');
 require_once('importPRODUKTTYPE.php');
 require_once('importGIVER.php');
 require_once('importINNBETALING.php');
+require_once('importINNBETALINGSBUNKE.php');
 require_once('importPOSTERING.php');
 require_once('importAKTIVITET.php');
 require_once('importAKSJON.php');
@@ -68,6 +69,9 @@ class importfile {
 				break;
 			case 'PMF_MAF.INNBETALING.txt':
 				return new importINNBETALING($this->pdo, $this->config);
+				break;
+			case "PMF_MAF.INNBETALINGSBUNKE.txt":
+				return new importINNBETALINGSBUNKE($this->pdo, $this->config);
 				break;
 			case 'PMF_MAF.POSTERING.txt':
 				return new importPOSTERING($this->pdo, $this->config);

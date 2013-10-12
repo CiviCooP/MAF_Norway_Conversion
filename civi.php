@@ -2,12 +2,15 @@
 
 error_reporting(E_ALL);
 
+require_once('check_ip.php');
+
 require_once('config.php');
 require_once('civi/importContacts.php');
 require_once('civi/importPledges.php');
 require_once('civi/importPledgePayments.php');
 require_once('civi/importGiver.php');
 require_once('civi/importAksjon.php');
+require_once('civi/importAktivitet.php');
 require_once('civi/importActivityTarget.php');
 
 class Civi {
@@ -54,7 +57,6 @@ class Civi {
 		$this->civi_pdo->exec("DELETE FROM `civicrm_phone` WHERE `contact_id` > 12;");
 		$this->civi_pdo->exec("DELETE FROM `civicrm_website` WHERE `contact_id` > 12;");
 		
-		$this->civi_pdo->exec("DELETE FROM `civicrm_value_maf_norway_individual_8` WHERE `entity_id` > 12;");
 		$this->civi_pdo->exec("DELETE FROM `civicrm_email` WHERE `contact_id` > 12;");
 		$this->civi_pdo->exec("DELETE FROM `civicrm_entity_tag` WHERE `entity_id` > 12 AND `entity_table` = 'civicrm_contact';");
 		$this->civi_pdo->exec("DELETE FROM `civicrm_group_contact` WHERE `contact_id` > 12;");
@@ -67,6 +69,8 @@ class Civi {
 		
 		$this->civi_pdo->exec("DELETE FROM `civicrm_activity_target`;");
 		$this->civi_pdo->exec("DELETE FROM `civicrm_activity`;");
+		
+		$this->civi_pdo->exec("DELETE FROM `civicrm_note`;");
 		
 		$this->civi_pdo->exec("DROP TABLE IF EXISTS `civicrm_contribution_recur_import`");
 		
@@ -104,7 +108,7 @@ class Civi {
 	protected function check_requirements() {
 		$this->check_extension('org.civicoop.general.api.country');
 		$this->check_extension('org.civicoop.general.api.financialtype');
-		$this->check_extension('org.civicoop.no.maf.custom');
+		//$this->check_extension('org.civicoop.no.maf.custom');
 	}
 	
 	protected function check_extension($key) {
@@ -131,11 +135,15 @@ class Civi {
 
 	public function import() {
 		$offset = 0;
+		$debug = false;
 		if (isset($_GET['offset'])) {
 			$offset = $_GET['offset'];
 		}
-		$limit = 300;
-		$i = new importContacts($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
+		if (isset($_GET['debug']) && $_GET['debug'] == '1') {
+			$debug = true;
+		}
+		$limit = 250;
+		$i = new importContacts($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit, $debug);
 		if ($i->getCount() == $limit) {
 			echo "/sites/all/modules/conversion/civi.php?contact=1&offset=".($offset+$limit);
 			
@@ -146,7 +154,7 @@ class Civi {
 					window.location = '/sites/all/modules/conversion/civi.php?contact=1&offset=".($offset+$limit)."';
 				}
 			</script>";
-		} else {
+		} elseif (!$debug) {
 			echo "/sites/all/modules/conversion/civi.php?givers=1";
 			
 			echo "<script>
@@ -170,7 +178,7 @@ class Civi {
 			echo "/sites/all/modules/conversion/civi.php?pledges=1&offset=".($offset+$limit);
 			
 			echo "<script>
-				setTimeout('herladen()', 1000);
+				setTimeout('herladen()', 300);
    
 				function herladen() {
 					window.location = '/sites/all/modules/conversion/civi.php?pledges=1&offset=".($offset+$limit)."';
@@ -191,31 +199,49 @@ class Civi {
 	
 	public function importPayments() {		
 		$offset = 0;
+		$debug = false;
 		if (isset($_GET['offset'])) {
 			$offset = $_GET['offset'];
 		}
+		if (isset($_GET['debug']) && $_GET['debug'] == '1') {
+			$debug = true;
+		}
 		$limit = 500;
-		$i = new importPledgePayments($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
+		$i = new importPledgePayments($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit, $debug);
 		if ($i->getCount() == $limit) {
 			echo "/sites/all/modules/conversion/civi.php?payments=1&offset=".($offset+$limit);
 			
 			echo "<script>
-				setTimeout('herladen()', 1000);
+				setTimeout('herladen()', 300);
    
 				function herladen() {
 					window.location = '/sites/all/modules/conversion/civi.php?payments=1&offset=".($offset+$limit)."';
 				}
 			</script>";
-		}
+		} /*else {
+			echo "/sites/all/modules/conversion/civi.php?aktivitet=1&offset=".($offset+$limit);
+			
+			echo "<script>
+				setTimeout('herladen()', 1000);
+   
+				function herladen() {
+					window.location = '/sites/all/modules/conversion/civi.php?aktivitet=1&offset=".($offset+$limit)."';
+				}
+			</script>";
+		}*/
 	}
 	
 	public function importGivers() {		
 		$offset = 0;
+		$debug = false;
 		if (isset($_GET['offset'])) {
 			$offset = $_GET['offset'];
 		}
+		if (isset($_GET['debug']) && $_GET['debug'] == '1') {
+			$debug = true;
+		}
 		$limit = 500;
-		$i = new importGiver($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
+		$i = new importGiver($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit, $debug);
 		if ($i->getCount() == $limit) {
 			echo "/sites/all/modules/conversion/civi.php?givers=1&offset=".($offset+$limit);
 			
@@ -226,14 +252,14 @@ class Civi {
 					window.location = '/sites/all/modules/conversion/civi.php?givers=1&offset=".($offset+$limit)."';
 				}
 			</script>";
-		} else {
-			echo "/sites/all/modules/conversion/civi.php?aksjon=1";
+		} elseif (!$debug) {
+			echo "/sites/all/modules/conversion/civi.php?pledges=1";
 			
 			echo "<script>
 				setTimeout('herladen()', 1000);
    
 				function herladen() {
-					window.location = '/sites/all/modules/conversion/civi.php?aksjon=1';
+					window.location = '/sites/all/modules/conversion/civi.php?pledges=1';
 				}
 			</script>";
 		}
@@ -257,7 +283,7 @@ class Civi {
 				}
 			</script>";
 		} else {
-			echo "/sites/all/modules/conversion/civi.php?activity_target=1&offset=";
+			echo "/sites/all/modules/conversion/civi.php?activity_target=1";
 			
 			echo "<script>
 				setTimeout('herladen()', 1000);
@@ -267,6 +293,36 @@ class Civi {
 				}
 			</script>";
 		}
+	}
+	
+	public function importAktivitet() {		
+		$offset = 0;
+		if (isset($_GET['offset'])) {
+			$offset = $_GET['offset'];
+		}
+		$limit = 1000;
+		$i = new importAktivitet($this->pdo, $this->civi_pdo, $this->api, $this->config, $offset, $limit);
+		if ($i->getCount() == $limit) {
+			echo "/sites/all/modules/conversion/civi.php?aktivitet=1&offset=".($offset+$limit);
+			
+			echo "<script>
+				setTimeout('herladen()', 1000);
+   
+				function herladen() {
+					window.location = '/sites/all/modules/conversion/civi.php?aktivitet=1&offset=".($offset+$limit)."';
+				}
+			</script>";
+		} /*else {
+			echo "/sites/all/modules/conversion/civi.php?pledges=1";
+			
+			echo "<script>
+				setTimeout('herladen()', 1000);
+   
+				function herladen() {
+					window.location = '/sites/all/modules/conversion/civi.php?pledges=1';
+				}
+			</script>";
+		}*/
 	}
 	
 	public function importActivityTarget() {		
@@ -280,7 +336,7 @@ class Civi {
 			echo "/sites/all/modules/conversion/civi.php?activity_target=1&offset=".($offset+$limit);
 			
 			echo "<script>
-				setTimeout('herladen()', 1000);
+				setTimeout('herladen()', 300);
    
 				function herladen() {
 					window.location = '/sites/all/modules/conversion/civi.php?activity_target=1&offset=".($offset+$limit)."';
@@ -307,6 +363,8 @@ if (isset($_GET['pledges']) && $_GET['pledges'] == 1) {
 	$civi->importPayments();
 } elseif (isset($_GET['givers']) && $_GET['givers'] == 1) {
 	$civi->importGivers();
+} elseif (isset($_GET['aktivitet']) && $_GET['aktivitet'] == 1) {
+	$civi->importAktivitet();
 } elseif (isset($_GET['aksjon']) && $_GET['aksjon'] == 1) {
 	$civi->importAksjon();
 } elseif (isset($_GET['activity_target']) && $_GET['activity_target'] == 1) {

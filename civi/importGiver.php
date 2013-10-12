@@ -16,7 +16,7 @@ class importGiver {
 
 	protected $tags;
 	
-	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config, $offset, $limit) {
+	public function __construct(PDO $pdo, PDO $civi_pdo, $api, $config, $offset, $limit, $debug) {
 		$this->config = $config;
 		$this->pdo = $pdo;
 		$this->civi_pdo = $civi_pdo;

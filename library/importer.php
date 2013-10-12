@@ -155,19 +155,10 @@ abstract class importer {
 	}
 	
 	protected function dropTable() {
-		$tableExists = true;
 		$tablename = $this->getTableName();
-		try {
-			$stmnt = $this->pdo->query("SELECT 1 FROM `".$tablename."`");
-			$stmnt->fetchAll();
-		} catch (Exception $e) {
-			$tableExists = false;
-		}
-		
-		if ($tableExists) {
-			$def = "DROP TABLE `".$tablename."`;";
-			$this->pdo->query($def);
-		}
+
+		$def = "DROP TABLE IF EXISTS `".$tablename."`;";
+		$this->pdo->query($def);
 	}
 	
 	protected function readNextline() {

@@ -127,15 +127,27 @@ class tempCustomFields {
 	
 		$gid = $this->createGroup('maf_norway_import', 'Contact', 'MAF Norway Import');		
 		$this->createField($gid, 'l_navn_id', 'l_navn_id', 'l_navn_id', '1', 'Text', 'String');
+		$this->createField($gid, 'NO_SocialSecurityNo', 'NO_SocialSecurityNo', 'NO_SocialSecurityNo', '1', 'Text', 'String');
+		$this->createField($gid, 'Organisasjonsnummer', 'Organisasjonsnummer', 'Organisasjonsnummer', '1', 'Text', 'String');
 		$this->createField($gid, 'd_opprettet', 'd_opprettet', 'd_opprettet', '1', 'Select Date', 'Date');
 		$this->createField($gid, 'd_stoppet', 'd_stoppet', 'd_stoppet', '1', 'Select Date', 'Date');
 		$this->createField($gid, 'a_stoppaarsak', 'a_stoppaarsak', 'a_stoppaarsak', '1', 'Text', 'String');
+		$this->createField($gid, 'd_offdato', 'd_offdato', 'd_offdato', '1', 'Select Date', 'Date');
+		$this->createField($gid, 'a_offhumnei', 'a_offhumnei', 'a_offhumnei', '1', 'Text', 'String');
+		$this->createField($gid, 'a_offtelefonnei', 'a_offtelefonnei', 'a_offtelefonnei', '1', 'Text', 'String');
+		$this->createField($gid, 'a_offpostnei', 'a_offpostnei', 'a_offpostnei', '1', 'Text', 'String');
+		
 		
 		$gid = $this->createGroup('maf_norway_aksjon_import', 'Activity', 'MAF Norway Aksjon Import');
 		$this->createField($gid, 'aksjon_id', 'aksjon_id', 'aksjon_id', '1', 'Text', 'String');
+		$this->createField($gid, 'aktivitet_id', 'aktivitet_id', 'aktivitet_id', '1', 'Text', 'String');
+		$this->createField($gid, 'aksjon_kid9', 'aksjon_kid9', 'aksjon_kid9', '1', 'Text', 'String');
+		$this->createField($gid, 'aksjon_kid15', 'aksjon_kid15', 'aksjon_kid15', '1', 'Text', 'String');
+		$this->createField($gid, 'aksjon_kid15_correction', 'aksjon_kid15_correction', 'aksjon_kid15_correction', '1', 'Text', 'String');
 		
 		$gid = $this->createGroup('maf_norway_contribution_import', 'Contribution', 'MAF Norway Import');
 		$this->createField($gid, 'contribution_aksjon_id', 'contribution_aksjon_id', 'contribution_aksjon_id', '1', 'Text', 'String');
+		$this->createField($gid, 'contribution_balanskonto', 'contribution_balanskonto', 'contribution_balanskonto', '1', 'Text', 'String');
 		
 		$gid = $this->createGroup('maf_norway_contribution_recur_import', 'ContributionRecur', 'MAF Norway Import');
 		$this->createField($gid, 'contributionrecur_aksjon_id', 'contributionrecur_aksjon_id', 'contributionrecur_aksjon_id', '1', 'Text', 'String');

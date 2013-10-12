@@ -1,6 +1,9 @@
 <?php
 
 error_reporting(E_ALL);
+
+require_once('check_ip.php');
+
 require_once('config.php');
 require_once('library/importfile.php');
 
@@ -12,7 +15,7 @@ class Conversion {
 	
 	public function __construct(Conversion_Config $config) {
 	
-		set_time_limit(8*60); 
+		set_time_limit(18*60); 
 	
 		$this->config = $config;
 		$this->pdo = new PDO('mysql:host='.$this->config->db_hostname.';dbname='.$this->config->db_name.";charset=utf-8", $this->config->db_username, $this->config->db_password,array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
@@ -53,6 +56,10 @@ class Conversion {
 		$this->importfile('PMF_MAF.AKTIVITETSTYPE.txt'); //Activity types
 	}
 	
+	public function importInnbetalingsBunke() {
+		$this->importfile('PMF_MAF.INNBETALINGSBUNKE.txt'); //Activity types
+	}
+	
 	protected function importFile($name) {
 		$import = new importfile($this->pdo, $this->config, $name);
 	}
@@ -68,4 +75,6 @@ if (isset($_GET['pledges']) && $_GET['pledges'] == 1) {
 	$conversion->importAksjon();
 } elseif (isset($_GET['contact']) && $_GET['contact'] == 1) {
 	$conversion->import();
+} elseif (isset($_GET['innbetalingsbunke']) && $_GET['innbetalingsbunke'] == 1) {
+	$conversion->importInnbetalingsBunke();
 }
